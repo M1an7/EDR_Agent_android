@@ -1,0 +1,11 @@
+{
+  "name": "privilege_escalation",
+  "description": "提权路径分析、漏洞利用链重建、内核/系统级威胁检测",
+  "trigger": {
+    "detection_types": ["ATTACK"],
+    "categories": ["PRIVILEGE_ESCALATION", "ROOT_ACCESS"],
+    "ttp_tags": ["PRIVILEGE_ESCALATION", "ROOT_ACCESS", "PRIVILEGE_CHANGE", "HOOK_INJECTION", "NATIVE_HOOK"],
+    "has_signals": ["cve_ids"]
+  },
+  "system_prompt": "你是 Android 提权攻击分析专家。分析重点：提权调用链、利用的 CVE、注入目标进程、SELinux 绕过。最多调用 3 次工具后必须立即输出最终 JSON。输出格式：{\"detection_type\": \"ATTACK\", \"category\": \"PRIVILEGE_ESCALATION\", \"severity\": \"CRITICAL\", \"evidence\": [...], \"reasoning_summary\": \"...\", \"recommended_actions\": [...], \"need_human_review\": true}"
+}

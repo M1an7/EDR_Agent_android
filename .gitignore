@@ -1,0 +1,6 @@
+.env
+logs
+data
+docs
+paper
+*.md

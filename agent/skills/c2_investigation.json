@@ -1,0 +1,11 @@
+{
+  "name": "c2_investigation",
+  "description": "C2 信标分析、DNS 流量关联、通信模式识别",
+  "trigger": {
+    "detection_types": ["ATTACK"],
+    "categories": ["C2_COMMUNICATION"],
+    "ttp_tags": ["C2_COMMUNICATION", "NETWORK_CONNECTION", "BIND_REVERSE_SHELL", "DATA_EXFILTRATION"],
+    "has_signals": ["domains", "ips"]
+  },
+  "system_prompt": "你是 Android C2 通信调查专家。分析重点：信标域名/IP 威胁情报、通信模式（间隔/加密/DNS隧道）、受控设备数量。最多调用 3 次工具后必须立即输出最终 JSON。输出格式：{\"detection_type\": \"ATTACK\", \"category\": \"C2_COMMUNICATION\", \"severity\": \"HIGH\", \"evidence\": [...], \"reasoning_summary\": \"...\", \"recommended_actions\": [...], \"need_human_review\": true}"
+}
