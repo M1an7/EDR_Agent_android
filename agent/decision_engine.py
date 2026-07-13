@@ -72,6 +72,7 @@ def decide(
     rag_used: bool = True,
     detection_type: str = "",
     category: str = "",
+    rag_confidence: float = 0.0,
 ) -> dict[str, Any]:
     """决策引擎：根据置信度/严重度/RAG 状态决定自动处置还是人工复核。"""
 
@@ -81,10 +82,17 @@ def decide(
     reasons: list[str] = []
     auto_allowed = True
 
-    # 条件 1：置信度
-    if confidence < 0.90:
+    # 条件 1：置信度（RAG 联动动态阈值）
+    if rag_confidence >= 0.85:
+        threshold = 0.70
+    elif rag_confidence >= 0.70:
+        threshold = 0.80
+    else:
+        threshold = 0.90
+
+    if confidence < threshold:
         auto_allowed = False
-        reasons.append(f"置信度 {confidence} < 0.90")
+        reasons.append(f"置信度 {confidence} < {threshold}（RAG置信度={rag_confidence}）")
 
     # 条件 2：严重度
     if severity not in {"HIGH", "CRITICAL"}:
@@ -108,6 +116,9 @@ def decide(
     if not recommended_actions and detection_type and category:
         recommended_actions = _infer_actions(detection_type, category)
     allowed = [a for a in recommended_actions if a in AUTO_REMEDIATION_WHITELIST]
+    # LLM 自然语言动作不匹配白名单 → 按分类推断白名单动作
+    if not allowed and detection_type and category:
+        allowed = [a for a in _infer_actions(detection_type, category) if a in AUTO_REMEDIATION_WHITELIST]
     blocked = [a for a in recommended_actions if a in BLOCKED_ACTIONS]
 
     if not allowed:

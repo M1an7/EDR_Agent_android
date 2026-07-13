@@ -15,6 +15,7 @@ _KNOWN_TLDS: set[str] = {
     "com", "net", "org", "io", "dev", "app", "info", "biz", "co", "me", "tv",
     "ai", "gg", "sh", "xyz", "tech", "online", "site", "cloud", "digital",
     "eu", "uk", "de", "cn", "ru", "jp", "br", "fr", "in",
+    "invalid", "test", "example", "local", "lan",
 }
 
 _DOMAIN_RE = re.compile(

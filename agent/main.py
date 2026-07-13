@@ -16,7 +16,7 @@ from .tools import StrictArgs, ToolRegistration
 from .runtime import AgentRuntime
 from .events import SecurityEventInput, extract_signals
 from .rule_engine import RuleEngine
-from .rag import MockRAGClient
+from .rag import MockRAGClient, LocalRAGClient
 from .analysis_agent import AnalysisAgent
 from .skills import SkillRouter, load_skills_from_dir
 from .confidence import compute_confidence
@@ -560,8 +560,8 @@ def run_pipeline(event_json: str) -> None:
     engine = RuleEngine()
     rule_result = engine.match(signals)
     analysis_result = None
-    rag = MockRAGClient()
-    rag_result = rag.search(signals)
+    rag = LocalRAGClient()
+    rag_result = rag.search(signals, event_id=event.event_id)
 
     if rule_result:
         print(f"\n[3] 规则直达命中:")
@@ -601,6 +601,13 @@ def run_pipeline(event_json: str) -> None:
             analysis_result = skill_results[0].get("result", skill_results[0]) if skill_results else {"detection_type": "UNKNOWN", "category": "UNKNOWN"}
 
         result = analysis_result
+        # 用真实 RAG 结果覆盖 rag_status
+        if rag_result.get("ok") and rag_result.get("results"):
+            result["rag_status"] = "SUCCESS"
+        elif rag_result.get("ok"):
+            result["rag_status"] = "NO_RESULT"
+        else:
+            result["rag_status"] = "DISABLED"
         audit.log("llm_assessment", result)
         print(f"\n[4] LLM 研判结果:")
         print(f"    类型: {result.get('detection_type')}")
@@ -630,6 +637,7 @@ def run_pipeline(event_json: str) -> None:
         evidence=result.get("evidence", []),
         detection_type=result.get("detection_type", ""),
         category=result.get("category", ""),
+        rag_confidence=rag_result.get("rag_confidence", 0.0),
     )
     print(f"[6] 决策:")
     audit.log("decision", decision)
@@ -682,7 +690,7 @@ def run_pipeline(event_json: str) -> None:
         print(f"\n[8] 反馈: 无新观察（信号均在规则库中）")
 
     print(f"\n{'=' * 60}")
-    print(f"最终结果: {result['detection_type']} / {result['category']}")
+    print(f"最终结果: {result.get('detection_type', 'UNKNOWN')} / {result.get('category', 'UNKNOWN')}")
     print(f"路径: {result.get('path', 'unknown')}")
     print(f"置信度: {confidence} | 自动处置: {'是' if decision['auto_remediation_allowed'] else '否'}")
 

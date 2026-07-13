@@ -139,7 +139,7 @@ class SkillRouter:
         from dotenv import load_dotenv
         load_dotenv()
 
-        # 预取上下文
+        # 预取上下文：优先用 event_id 精确匹配 RAG evidence pack
         rag_data, log_data = {}, {}
         for name, reg in self.base_tools.items():
             try:
@@ -150,6 +150,11 @@ class SkillRouter:
                         (signals.get("package_names") or [])
                     )[:256]
                     rag_data = reg.handler(reg.args_model(query_keywords=kws))
+                    # 如果 handler 返回的 RAG 结果是空的（没有 IOC 匹配），用 event_id 再试
+                    if not rag_data.get("results") and event_id:
+                        from ..rag import LocalRAGClient
+                        local = LocalRAGClient()
+                        rag_data = local.search(signals, event_id=event_id)
                 elif name == "query_android_logs" and not log_data:
                     for kw in (signals.get("package_names") or [])[:2] + (signals.get("ttp_tags") or [])[:2]:
                         if kw:

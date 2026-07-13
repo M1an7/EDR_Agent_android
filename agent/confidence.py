@@ -13,7 +13,7 @@ def compute_confidence(
 
     score = 0.0
 
-    # 1. 明确 IOC 命中 (0.30)
+    # 1. 明确 IOC 命中 (0.25)
     ioc_confirmed = False
     if rule_result:
         evidence = rule_result.get("evidence", [])
@@ -33,7 +33,7 @@ def compute_confidence(
         if has_ioc and has_ttp:
             ioc_confirmed = True
     if ioc_confirmed:
-        score += 0.30
+        score += 0.25
 
     # 2. 行为规则命中 (0.25)
     behavior_hit = False
@@ -44,18 +44,26 @@ def compute_confidence(
             if e.get("signal_type") in {"domain", "ip", "hash"}:
                 behavior_hit = True
                 break
+    # RAG 的 mobile_behavior / behavior_mapping 命中 = 行为证据
+    if not behavior_hit and rag_result:
+        for r in rag_result.get("results", []):
+            if r.get("source_type") in {"TTP"} and r.get("similarity_score", 0) >= 0.3:
+                behavior_hit = True
+                break
     if behavior_hit:
         score += 0.25
 
-    # 3. RAG 高相似度命中 (0.20)
-    rag_hit = False
+    # 3. RAG 置信度 (0.30) — 使用 RAG 真实 confidence 值
+    rag_confidence = 0.0
     if rag_result:
-        for r in rag_result.get("results", []):
-            if r.get("similarity_score", 0) >= 0.65:
-                rag_hit = True
-                break
-    if rag_hit:
-        score += 0.20
+        rag_confidence = rag_result.get("rag_confidence", 0.0)
+        # 如果 RAG 返回了结果但没带 rag_confidence，用结果数量估算
+        if rag_confidence == 0.0 and rag_result.get("results"):
+            scores = [r.get("similarity_score", 0) for r in rag_result["results"]]
+            if scores:
+                rag_confidence = max(scores)
+    if rag_confidence > 0:
+        score += round(rag_confidence * 0.30, 2)
 
     # 4. CVE / 补丁上下文匹配 (0.10)
     cve_hit = bool(signals.get("cve_ids"))
@@ -70,8 +78,7 @@ def compute_confidence(
     if cve_hit:
         score += 0.10
 
-    # 5. 历史相似案例 (0.10) — 暂不可用
-    # 阶段 7 反馈机制启用后，从积累区查询相似历史事件
+    # 5. 历史相似案例 (0.05) — 暂不可用
 
     # 6. 上下文完整性 (0.05)
     context_complete = (
